@@ -11,6 +11,7 @@ using MvvmHelpers.Commands;
 using Xamarin.Forms;
 using ZebraBluetoothSample.Dependencies;
 using ZebraBluetoothSample.Models;
+using ZebraBluetoothSample.Pages;
 using ZXing.Net.Mobile.Forms;
 using Command = MvvmHelpers.Commands.Command;
 
@@ -25,6 +26,7 @@ namespace ZebraBluetoothSample
         ObservableCollection<IDiscoveredPrinter> printers = new ObservableCollection<IDiscoveredPrinter>();
         protected IDiscoveredPrinter ChoosenPrinter;
         public string barcodeText;
+        int count = 1;
         public ObservableRangeCollection<Barcode> Barcodes { get; set; }
         public AsyncCommand RefreshCommand { get; }
         public AsyncCommand<Barcode> PrintCommand { get; }
@@ -105,8 +107,10 @@ namespace ZebraBluetoothSample
                 {
                     return;
                 }
-                
-                sendZplReceipt(connection);
+                for(int i = 0; i < count; i++)
+                {
+                    sendZplBarcode(connection);
+                }
                 if ((connection != null) && (connection.IsConnected))
                     connection.Close();
             }
@@ -121,9 +125,68 @@ namespace ZebraBluetoothSample
         public ICommand PrintAllCommand => new Command(async () =>
         {
             var barcodes = await _barcodeService.GetBarcode();
-            foreach (var barcode in barcodes)
+            if (barcodes == null)
+                return;
+            IConnection connection = null;
+            try
             {
-                await Print(barcode);
+                connection = ChoosenPrinter.Connection;
+                if (connection == null)
+                {
+                    await DisplayAlert("Print Error", "No Printer Connected", "OK");
+                    return;
+                }
+                connection.Open();
+                IZebraPrinter printer = ZebraPrinterFactory.Current.GetInstance(connection);
+                if ((!CheckPrinterLanguage(connection)) || (!PreCheckPrinterStatus(printer)))
+                {
+                    return;
+                }
+                foreach (var barcode in barcodes)
+                {
+                    barcodeText = barcode.Text;
+                    for (int i = 0; i < count; i++)
+                    {
+                        sendZplBarcode(connection);
+                    }
+                }
+                if ((connection != null) && (connection.IsConnected))
+                    connection.Close();
+            }
+            catch (Exception ex)
+            {
+                // Connection Exceptions and issues are caught here
+                Debug.WriteLine(ex.Message);
+            }     
+        });
+
+        public ICommand LabelModeCommand => new Command(async () =>
+        {
+            IConnection connection = null;
+            try
+            {
+                connection = ChoosenPrinter.Connection;
+                if (connection == null)
+                {
+                    await DisplayAlert("Print Error", "No Printer Connected", "OK");
+                    return;
+                }
+                connection.Open();
+                IZebraPrinter printer = ZebraPrinterFactory.Current.GetInstance(connection);
+                if ((!CheckPrinterLanguage(connection)) || (!PreCheckPrinterStatus(printer)))
+                {
+                    return;
+                }
+
+                sendZplLabelMode(connection);
+
+                if ((connection != null) && (connection.IsConnected))
+                    connection.Close();
+            }
+            catch (Exception ex)
+            {
+                // Connection Exceptions and issues are caught here
+                Debug.WriteLine(ex.Message);
             }
         });
 
@@ -189,7 +252,7 @@ namespace ZebraBluetoothSample
                     
                     return;
                 }
-                sendZplReceipt(connection);
+                sendZplBarcode(connection);
                 if (PostPrintCheckStatus(printer)) {
                     Debug.WriteLine("Printing process is done");
                 }
@@ -210,7 +273,7 @@ namespace ZebraBluetoothSample
 
        
         //Format and construct the body of the printer string
-        private void sendZplReceipt(IConnection printerConnection)
+        private void sendZplBarcode(IConnection printerConnection)
         {
             /*
              This routine is provided to you as an example of how to create a variable length label with user specified data.
@@ -243,15 +306,17 @@ namespace ZebraBluetoothSample
                      ^B sets barcode information
                      ^XZ indicates the end of a label
                      */
+
                     "^XA" +
 
-                    "^FO10,20" + "\r\n" + "^A0,52,50" + "\r\n" + "^FD Nyrstar^FS" + "\r\n" +
+                    "^FO10,30" + "\r\n" + "^A0,52,50" + "\r\n" + "^FD Nyrstar BHAS 9997^FS" + "\r\n" +
 
                     "^FO80,100" + "\r\n" + "^GB600,250,4" + "\r\n" + "^FS" + "\r\n" +
 
-                    "^FO175,125" + "\r\n" + "^BCN,150,Y,N,N,A" + "\r\n" + "^FD" + barcodeText + "^FS" + "\r\n" +
+                    "^FO175,150" + "\r\n" + "^BCN,150,Y,N,N,A" + "\r\n" + "^FD" + barcodeText + "^FS" + "\r\n" +
 
-                    "^FO425,30" + "\r\n" + "^A0,N,25,25" + "\r\n" + "^FD{0}^FS" + "\r\n" + "^XZ";
+                    //"^FO425,30" + "\r\n" + "^A0,N,25,25" + "\r\n" + "^FD{0}^FS" + "\r\n" 
+                    "^XZ";
 
             
 
@@ -260,6 +325,22 @@ namespace ZebraBluetoothSample
 
             string header = string.Format(tmpHeader, dateString);
             var t = new UTF8Encoding().GetBytes(header);
+            printerConnection.Write(t);
+
+
+        }
+
+        private void sendZplLabelMode(IConnection printerConnection)
+        {
+
+            String tmpHeader =
+
+                    "~JC" +
+                    "^XA" +
+                    "^JUS" +
+                    "^XZ";
+
+            var t = new UTF8Encoding().GetBytes(tmpHeader);
             printerConnection.Write(t);
 
 
@@ -393,6 +474,20 @@ namespace ZebraBluetoothSample
             Barcodes.AddRange(barcodes);
 
             IsBusy = false;
+        }
+
+        private void AddButton_Clicked(object sender, EventArgs e)
+        {
+            count++;
+            Copies.Text = $"Copies: {count}";
+        }
+
+        private void MinusButton_Clicked(object sender, EventArgs e)
+        {
+            if (count == 1)
+                return;
+            count--;
+            Copies.Text = $"Copies: {count}";
         }
     }
 }

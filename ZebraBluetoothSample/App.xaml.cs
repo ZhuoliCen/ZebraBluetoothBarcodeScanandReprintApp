@@ -8,7 +8,11 @@ namespace ZebraBluetoothSample
         {
             InitializeComponent();
 
-            MainPage = new NavigationPage(new ZebraBluetoothSamplePage());
+            MainPage = new NavigationPage(new ZebraBluetoothSamplePage())
+            {
+                BarBackgroundColor = Color.Teal,
+                BarTextColor = Color.White,
+            };
         }
 
         protected override void OnStart()
