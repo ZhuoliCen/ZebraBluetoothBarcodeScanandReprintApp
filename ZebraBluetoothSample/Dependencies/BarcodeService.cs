@@ -31,9 +31,16 @@ namespace ZebraBluetoothSample.Dependencies
         public async Task AddBarcode(string text)
         {
             await Init();
+            var code = text.Substring(0, 4);
+            var itemNumber = text.Substring(4, 8);
+            var netWeight = text.Substring(12, text.Length-12);
+
             var barcode = new Barcode
             {
-                Text = text
+                Text = text,
+                Code = code,
+                ItemNumber = itemNumber,
+                NetWeight = netWeight
             };
 
             var id = await db.InsertAsync(barcode);

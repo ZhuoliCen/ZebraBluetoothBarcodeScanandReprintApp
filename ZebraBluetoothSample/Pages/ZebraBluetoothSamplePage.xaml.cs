@@ -26,6 +26,9 @@ namespace ZebraBluetoothSample
         ObservableCollection<IDiscoveredPrinter> printers = new ObservableCollection<IDiscoveredPrinter>();
         protected IDiscoveredPrinter ChoosenPrinter;
         public string barcodeText;
+        public string codeText;
+        public string itemNumberText;
+        public string netWeightText;
         int count = 1;
         public ObservableRangeCollection<Barcode> Barcodes { get; set; }
         public AsyncCommand RefreshCommand { get; }
@@ -92,6 +95,9 @@ namespace ZebraBluetoothSample
                 return;
 
             barcodeText = barcode.Text;
+            codeText = barcode.Code;
+            itemNumberText = barcode.ItemNumber;
+            netWeightText = barcode.NetWeight;
             IConnection connection = null;
             try
             {
@@ -145,6 +151,9 @@ namespace ZebraBluetoothSample
                 foreach (var barcode in barcodes)
                 {
                     barcodeText = barcode.Text;
+                    codeText = barcode.Code;
+                    itemNumberText = barcode.ItemNumber;
+                    netWeightText = barcode.NetWeight;
                     for (int i = 0; i < count; i++)
                     {
                         sendZplBarcode(connection);
@@ -311,11 +320,24 @@ namespace ZebraBluetoothSample
 
                     "^FO10,30" + "\r\n" + "^A0,52,50" + "\r\n" + "^FD Nyrstar BHAS 9997^FS" + "\r\n" +
 
-                    "^FO80,100" + "\r\n" + "^GB600,250,4" + "\r\n" + "^FS" + "\r\n" +
+                    "^FO585,25" + "\r\n" + "^GB100,40,20" + "\r\n" + "^FS" + "\r\n" +
 
-                    "^FO175,150" + "\r\n" + "^BCN,150,Y,N,N,A" + "\r\n" + "^FD" + barcodeText + "^FS" + "\r\n" +
+                    "^FO550,70" + "\r\n" + "^A0,25,25" + "\r\n" + "^FD Net Weight (kg)^FS" + "\r\n" +
+                    "^FO600,30" + "\r\n" + "^A0,35,35" + "\r\n" + "^FR" + "\r\n"  + "^FD" + netWeightText + "^FS" + "\r\n" +
+
+                    "^FO60,100" + "\r\n" + "^GB680,0,4" + "\r\n" + "^FS" + "\r\n" +
+                    "^FO60,325" + "\r\n" + "^GB680,0,4" + "\r\n" + "^FS" + "\r\n" +
+
+                    "^FO175,130" + "\r\n" + "^BCN,150,Y,N,N,A" + "\r\n" + "^FD" + barcodeText + "^FS" + "\r\n" +
 
                     //"^FO425,30" + "\r\n" + "^A0,N,25,25" + "\r\n" + "^FD{0}^FS" + "\r\n" 
+                    "^FO100,340" + "\r\n" + "^A0,35,35" + "\r\n" + "^FD Code^FS" + "\r\n" +
+                    "^FO200,340" + "\r\n" + "^A0,35,35" + "\r\n" + "^FD" + codeText + "^FS" + "\r\n" +
+
+                    "^FO400,340" + "\r\n" + "^A0,35,35" + "\r\n" + "^FD Item No.^FS" + "\r\n" +
+                    "^FO550,340" + "\r\n" + "^A0,35,35" + "\r\n" + "^FD" + itemNumberText + "^FS" + "\r\n" +
+
+                    
                     "^XZ";
 
             
@@ -433,9 +455,13 @@ namespace ZebraBluetoothSample
             {
                 Device.BeginInvokeOnMainThread(async () =>
                 {
-                    await DisplayAlert("Scanned Barcode", result.Text, "OK");
-
                     var text = result.Text;
+                    if (text.Length != 16)
+                    {
+                        await Application.Current.MainPage.DisplayAlert("Barcode Error", "Scanned Barcode is invalid", "OK");
+                        return;
+                    }
+                    await DisplayAlert("Scanned Barcode", result.Text, "OK");
                     await _barcodeService.AddBarcode(text);
                     await Refresh();
                 });

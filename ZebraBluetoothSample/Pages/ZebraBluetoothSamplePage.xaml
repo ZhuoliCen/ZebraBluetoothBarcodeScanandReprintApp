@@ -126,12 +126,16 @@
                                     <StackLayout Orientation="Vertical">
                                         <Label
                                             FontSize="Large"
-                                            Text="{Binding Text}"
+                                            Text="{Binding ItemNumber, StringFormat='Item No. {0}'}"
                                             TextColor="White"
                                             VerticalOptions="Center" />
                                         <Label
-                                            FontSize="Micro"
-                                            Text="{Binding Id, StringFormat='Barcode ID:{0}'}"
+                                            FontSize="Small"
+                                            Text="{Binding Code, StringFormat='Code: {0}'}"
+                                            VerticalOptions="Center" />
+                                        <Label
+                                            FontSize="Small"
+                                            Text="{Binding NetWeight, StringFormat='Net Weight: {0} kg'}"
                                             VerticalOptions="Center" />
                                     </StackLayout>
                                     <Image
