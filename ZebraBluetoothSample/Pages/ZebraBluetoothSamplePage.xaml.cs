@@ -89,6 +89,7 @@ namespace ZebraBluetoothSample
             ChoosenPrinter = e.SelectedItem as IDiscoveredPrinter;
         }
 
+        #region Printing
         async Task Print(Barcode barcode)
         {
             if (barcode == null)
@@ -168,6 +169,8 @@ namespace ZebraBluetoothSample
                 Debug.WriteLine(ex.Message);
             }     
         });
+
+        #endregion
 
         public ICommand LabelModeCommand => new Command(async () =>
         {
